@@ -1,0 +1,75 @@
+{% extends 'layouts.html'%}
+
+{% block body %}
+	<div class="jumbotron text-center">
+		<h1>Welcome to ClinicDash</h1>
+		<p class="lead">PostgreSQL Query result: </p>
+	</div>
+		<div id="zerostate"></div>
+		<script type="text/javascript">
+			// For chart one - (Bar chart)
+			var zeroChart = dc.rowChart("#zerostate");
+			var data = {{results | tojson}}
+			var ndx = crossfilter(data);
+			var all = ndx.groupAll();
+			var nameDimension = ndx.dimension(function(d){ return d[0]["name"];});
+			nameDimension.filter("Neurology");
+			var nearbyCompetition = all.value();
+			nameDimension.filterAll();
+			var nameGroup = nameDimension.group();
+
+			// For national Average - (Number Display)
+			
+			var nat_avg = {{national_avg | tojson}}
+			var nacf = crossfilter(nat_avg);
+			var na_nameDimension = nacf.dimension(function(d){ return d[0]["name"];});
+			// na_nameDimension.filter("Neurology");
+			// var na_all = nacf.groupAll().reduceSum(function(fact){ return fact[0]["national_avg"];}).value()
+			
+			// console.log("national avg for Neurology is:"+na_all);
+
+			zeroChart
+   .width(768)
+    .height(480)
+    .x(d3.scaleLinear().domain([6,20]))
+    .elasticX(true).filter("Neurology")
+				.dimension(nameDimension)
+				.group(nameGroup)
+				.rowsCap(10)
+				.othersGrouper(false).addFilterHandler(function (filters, filter) {
+    filters.length = 0; // empty the array
+    filters.push(filter);
+    return filters;
+});;
+
+		zeroChart.on('filtered', function (chart) {
+         var filters = chart.filters();
+         na_nameDimension.filterAll();
+         if (filters.length) {
+             console.log(filters[0]+"    and value:"+all.value());
+             na_nameDimension.filter(filters[0]);
+			var na_nameGroup = nacf.groupAll().reduceSum(function(fact){ return fact[0]["national_avg"];})
+			//na_all = na_nameGroup.value()
+		var boxNatAvg = dc.numberDisplay("#natAvg");
+		boxNatAvg
+		.formatNumber(d3.format(".3s"))
+        .valueAccessor(function(d) {console.log("Boxnumber test: "+d);return d })
+        .group(na_nameGroup).title("National Average")
+        .title("National Average");
+			//console.log("national avg is:"+na_all);
+         }
+         else
+             console.log('no filters');
+    });
+				//.filter([nearbyCompetition-5,nearbyCompetition+5]);
+			dc.renderAll();
+
+		</script>
+	</div>
+	<br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br/><br/><br/><br/><br/>
+	<div class='container' style='font: 12px sans-serif;color: white'>
+		<h4>National Average</h4>
+		<div id = "natAvg" style='color: black;'></div>
+	</div>
+	<br/><br/><br/><br/>
+{% endblock %}

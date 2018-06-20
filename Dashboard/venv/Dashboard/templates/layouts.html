@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>ClinicDash</title>
+	<link rel="stylesheet" type="text/css" href="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/css/bootstrap.min.css">
+	<link rel="stylesheet" type="text/css" href="https://cdnjs.cloudflare.com/ajax/libs/dc/3.0.4/dc.min.css">
+	<script src="http://d3js.org/d3.v4.min.js" charset="utf-8"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/crossfilter/1.3.12/crossfilter.min.js" charset="utf-8"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/dc/3.0.4/dc.min.js" charset="utf-8"></script>
+	<script src="http://d3js.org/d3.v4.min.js" charset="utf-8"></script>
+		 <style>
+      #natAvg {
+        background: orange;
+        width: 200px;
+        font-size: 30px;
+        text-align: center;
+        padding-top: 63px;
+        padding-bottom: 63px;
+        height: 74px;
+        line-height: normal;
+      }
+    </style>
+</head>
+<body class="bg-dark">
+{% include 'includes/_navbar.html'%}
+<main class="container" padding-top="100px">
+{% block body %}{% endblock %}
+</main>
+<script src="https://stackpath.bootstrapcdn.com/bootstrap/4.1.1/js/bootstrap.min.js"></script>
+</body>
+</html> 
