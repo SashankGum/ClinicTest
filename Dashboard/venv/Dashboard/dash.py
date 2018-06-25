@@ -1,5 +1,6 @@
 from flask import Flask,render_template
 from dbcon import getCon
+from flask import url_for
 
 hostname = 'localhost'
 username = 'postgres'
@@ -7,6 +8,7 @@ password = 'pass@123'
 database = 'Test'
 
 app = Flask(__name__)
+
 
 def doQuery( conn ) :
     cur = conn.cursor()
@@ -24,7 +26,7 @@ def doQuery( conn ) :
     nat_avg = cur.fetchall()
     return res,nat_avg
 
-@app.route('/')
+@app.route('/',methods=['GET'])
 def index():
 	x = getCon()
 	result, nat_avg= doQuery(x)
