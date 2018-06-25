@@ -5,6 +5,7 @@
 		<h1>Welcome to ClinicDash</h1>
 		<p class="lead">PostgreSQL Query result: </p>
 	</div>
+	<div id="chart" align="center"></div>
 	<div>
 	<script>
 
@@ -22,7 +23,7 @@ var path = d3.geo.path()
     .projection(projection);
 
 //Create an SVG
-var svg = d3.select("body").append("svg")
+var svg = d3.select("#chart").append("svg")
     .attr("width", width)
     .attr("height", height);
 
@@ -32,14 +33,14 @@ var features = svg.append("g")
 
 //Create zoom/pan listener
 //Change [1,Infinity] to adjust the min/max zoom scale
-var zoom = d3.behavior.zoom()
-    .scaleExtent([1, Infinity])
-    .on("zoom",zoomed);
+// var zoom = d3.behavior.zoom()
+//     .scaleExtent([1, Infinity])
+//     .on("zoom",zoomed);
 
-svg.call(zoom);
+// svg.call(zoom);
 
 //Create a tooltip, hidden at the start
-var tooltip = d3.select("body").append("div").attr("class","tooltip");
+var tooltip = d3.select("#chart").append("div").attr("class","tooltip");
 
 d3.json("{{url_for('static', filename='gz_2010_us_050_00_5m.topojson')}}",function(error,geodata) {
 	console.log(geodata)
@@ -94,7 +95,7 @@ function hideTooltip() {
 }
 </script>
 </div>
-		<div id="zerostate"></div>
+		<div id="zerostate" class="container"></div>
 		<script type="text/javascript">
 			// For chart one - (Bar chart)
 			var zeroChart = dc.rowChart("#zerostate");
@@ -155,7 +156,7 @@ function hideTooltip() {
 
 		</script>
 	</div>
-	<br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br/><br/><br/><br/><br/>
+	<!-- <br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br /><br/><br/><br/><br/><br/> -->
 	<div class='container' style='font: 12px sans-serif;color: white'>
 		<h4>National Average</h4>
 		<div id = "natAvg" style='color: black;'></div>
