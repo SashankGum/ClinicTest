@@ -5,95 +5,382 @@
 		<h1>Welcome to ClinicDash</h1>
 		<p class="lead">PostgreSQL Query result: </p>
 	</div>
-	<div id="chart" align="center"></div>
-	<div>
+	<div id="title">Population in the United States</div>
+<div id="charts">
+  <div id="pop-chart" class="chart">
+    <div class="title">Population Range</div>
+  </div>
+</div>
+<div id="map">
+	</div>
 	<script>
 
-//Map dimensions (in pixels)
 var width = 800,
     height = 500;
 
-//Map projection
-var projection = d3.geo.albersUsa()
-    .scale(972.94948229494)
-    .translate([width/2,height/2]) //translate to center the map in view
+var extant = [];
 
-//Generate paths based on projection
+var projection = d3.geo.albersUsa()
+    .scale(1000)
+    .translate([width / 2, height / 2]);
+
 var path = d3.geo.path()
     .projection(projection);
 
-//Create an SVG
-var svg = d3.select("#chart").append("svg")
+var quantize = d3.scale.quantize()
+    .domain([0, 10000000])
+    .range(d3.range(9).map(function(i) { return "q" + i + "-9"; }));
+
+var popById = d3.map()
+
+var svg = d3.select("#map").append("svg")
     .attr("width", width)
     .attr("height", height);
 
-//Group for the map features
-var features = svg.append("g")
-    .attr("class","features");
+tip = d3.tip()
+  .attr('class', 'd3-tip')
+  .offset([-10, 0])
+  .direction('n')
+  .html(function(d) {
+    return "Name: " + d.properties.NAME + "<br/>Population: " + d.properties.CENSUSAREA
+ });
 
-//Create zoom/pan listener
-//Change [1,Infinity] to adjust the min/max zoom scale
-// var zoom = d3.behavior.zoom()
-//     .scaleExtent([1, Infinity])
-//     .on("zoom",zoomed);
+svg.call(tip);
+var nation = crossfilter(),
+    nation_all = nation.groupAll(),
+    pop_dimension = nation.dimension(function(d) {return parseInt(d.CENSUSAREA); }),
+    pop_group = pop_dimension.group();
 
-// svg.call(zoom);
+queue()
+    .defer(d3.json, "{{url_for('static', filename='gz_2010_us_050_00_5m.topojson')}}")
+    .defer(d3.csv, "{{url_for('static', filename='idkwhat.csv')}}", function(d){
+    	nation.add([d]);
+    	extant.push(d.id);
+    	popById.set(d.GEO_ID, parseInt(d.CENSUSAREA));
+    }) // Load Populatio CSV
+    .await(ready);
 
-//Create a tooltip, hidden at the start
-var tooltip = d3.select("#chart").append("div").attr("class","tooltip");
+function ready(error, us, population) { // Add parameter for unemployment
+  if (error) throw error;
 
-d3.json("{{url_for('static', filename='gz_2010_us_050_00_5m.topojson')}}",function(error,geodata) {
-	console.log(geodata)
-  if (error) return console.log(error); //unknown error, check the console
+  console.log(us);
 
-  //Create a path for each map feature in the data
-  features.selectAll("path")
-    .data(topojson.feature(geodata,geodata.objects.gz_2010_us_050_00_5m).features) //generate features from TopoJSON
-    .enter()
-    .append("path")
-    .attr("d",path)
-    .on("mouseover",showTooltip)
-    .on("mousemove",moveTooltip)
-    .on("mouseout",hideTooltip)
-    .on("click",clicked);
+  // var popById = {}; // Create empty object for holding dataset
+  // population.forEach(function(d) {
+  //   popById[d.GEO_ID] = +d.CENSUSAREA; // Create property for each ID, give it value from rate
+  // });
 
-});
+  console.log(popById);
+  
+  var color = d3.scale.threshold()
+    .domain([30000,50000,100000,500000, 1000000, 5000000])
+    //.range(d3.range(9).map(function(i) { return "q" + i + "-9"; }));
+    .range(["#f2f0f7", "#dadaeb", "#bcbddc", "#9e9ac8", "#756bb1", "#54278f","darkblue"]);
+    //.range(["#b2182b","#d6604d","#f4a582","#fddbc7","#f7f7f7","#d1e5f0","#92c5de","#4393c3","#2166ac"]);
 
-// Add optional onClick events for features here
-// d.properties contains the attributes (e.g. d.properties.name, d.properties.population)
-function clicked(d,i) {
+  svg.append("g")
+      .attr("class", "counties")
+    .selectAll("path")
+      .data(topojson.feature(us, us.objects.gz_2010_us_050_00_5m).features)
+    .enter().append("path")
+      .attr("d", path)
+      .style("fill", function(d) {
+      	if(d.properties.CENSUSAREA ){
+      		return color(d.properties.CENSUSAREA)
+      	}
+      	else{
+      		return "white"
+      	}
+	})
+      .style("stroke", "black")
+            .on('mouseover',tip.show)
+      .on('mouseout', tip.hide);
+
+      //pop_dimension.filter(5172);
+
+      // svg.append("g")
+      // .attr("class", "counties")
+      // .selectAll("path")
+      // .data(pop_dimension.top(Infinity)).enter().append("path");
+
+  var charts = [
+    barChart(true)
+      .dimension(pop_dimension)
+      .group(pop_group)
+    .x(d3.scale.linear()
+      .domain([0, 10000000])
+      .range([0, 900])),
+
+  ];
+
+  var chart = d3.selectAll(".chart")
+    .data(charts)
+    .each(function(chart) { chart.on("brush", renderAll).on("brushend", renderAll); });
+
+  renderAll();
+ // barChart
+  function barChart(percent) {
+    if (!barChart.id) barChart.id = 0;
+
+    percent = typeof percent !== 'undefined' ? percent : false;
+    var formatAsPercentage = d3.format(".2s");
+    
+    var axis = d3.svg.axis().orient("bottom").ticks(20)
+        .tickFormat(d3.format(".2s"));
+    if (percent == true) {
+      axis.tickFormat(formatAsPercentage);
+      
+    }
+    var margin = {top: 10, right: 10, bottom: 20, left: 10},
+      x,
+      y = d3.scale.linear().range([50, 0]),
+      id = barChart.id++,
+      brush = d3.svg.brush(),
+      brushDirty,
+      dimension,
+      group,
+      round;
+
+    function chart(div) {
+      var width = x.range()[1],
+          height = y.range()[0];
+
+      try {
+        y.domain([0, group.top(1)[0].value]);
+      }
+      catch(err) {
+        window.reset
+      } 
+
+      div.each(function() {
+        var div = d3.select(this),
+            g = div.select("g");
+
+        // Create the skeletal chart.
+        if (g.empty()) {
+          div.select(".title").append("a")
+              .attr("href", "javascript:reset(" + id + ")")
+              .attr("class", "reset")
+              .text("reset")
+              .style("display", "none");
+
+          g = div.append("svg")
+              .attr("width", width + 5*margin.left + 5*margin.right)
+              .attr("height", height + margin.top + margin.bottom)
+            .append("g")
+              .attr("transform", "translate(" + margin.left + "," + margin.top + ")");
+
+          g.append("clipPath")
+              .attr("id", "clip-" + id)
+            .append("rect")
+              .attr("width", width)
+              .attr("height", height);
+
+          g.selectAll(".bar")
+              .data(["background", "foreground"])
+            .enter().append("path")
+              .attr("class", function(d) { return d + " bar"; })
+              .datum(group.all());
+
+          g.selectAll(".foreground.bar")
+              .attr("clip-path", "url(#clip-" + id + ")");
+
+          g.append("g")
+              .attr("class", "axis")
+              .attr("transform", "translate(0," + height + ")")
+              .call(axis);
+
+          // Initialize the brush component with pretty resize handles.
+          var gBrush = g.append("g").attr("class", "brush").call(brush);
+          gBrush.selectAll("rect").attr("height", height);
+          gBrush.selectAll(".resize").append("path").attr("d", resizePath);
+        }
+
+        // Only redraw the brush if set externally.
+        if (brushDirty) {
+          brushDirty = false;
+          g.selectAll(".brush").call(brush);
+          div.select(".title a").style("display", brush.empty() ? "none" : null);
+          if (brush.empty()) {
+            g.selectAll("#clip-" + id + " rect")
+                .attr("x", 0)
+                .attr("width", width);
+          } else {
+            var extent = brush.extent();
+            g.selectAll("#clip-" + id + " rect")
+                .attr("x", x(extent[0]))
+                .attr("width", x(extent[1]) - x(extent[0]));
+          }
+        }
+
+        g.selectAll(".bar").attr("d", barPath);
+      });
+
+      function barPath(groups) {
+        var path = [],
+            i = -1,
+            n = groups.length,
+            d;
+        while (++i < n) {
+          d = groups[i];
+          path.push("M", x(d.key), ",", height, "V", y(d.value), "h9V", height);
+        }
+        return path.join("");
+      }
+
+      function resizePath(d) {
+        var e = +(d == "e"),
+            x = e ? 1 : -1,
+            y = height / 3;
+        return "M" + (.5 * x) + "," + y
+            + "A6,6 0 0 " + e + " " + (6.5 * x) + "," + (y + 6)
+            + "V" + (2 * y - 6)
+            + "A6,6 0 0 " + e + " " + (.5 * x) + "," + (2 * y)
+            + "Z"
+            + "M" + (2.5 * x) + "," + (y + 8)
+            + "V" + (2 * y - 8)
+            + "M" + (4.5 * x) + "," + (y + 8)
+            + "V" + (2 * y - 8);
+      }
+    }
+
+    brush.on("brushstart.chart", function() {
+      var div = d3.select(this.parentNode.parentNode.parentNode);
+      div.select(".title a").style("display", null);
+    });
+
+    brush.on("brush.chart", function() {
+      var g = d3.select(this.parentNode),
+          extent = brush.extent();
+      if (round) g.select(".brush")
+          .call(brush.extent(extent = extent.map(round)))
+        .selectAll(".resize")
+          .style("display", null);
+      g.select("#clip-" + id + " rect")
+          .attr("x", x(extent[0]))
+          .attr("width", x(extent[1]) - x(extent[0]));
+
+      var selected = [];
+
+      dimension.filterRange(extent).top(Infinity).forEach(function(d) {
+      	//console.log(d);
+        selected.push(d.GEO_ID)
+      });
+
+      //console.log(selected)
+
+      svg.attr("class", "counties")
+        .selectAll("path")
+              .style("fill", function(d) {
+      	if(selected.indexOf(d.properties.GEO_ID)>-1){
+      		return "yellow"
+      	}
+      	else{
+      		return "red"
+      	}
+      })
+          .attr("class", function(d) { if (selected.indexOf(d.GEO_ID) >= 0) {return "q8-9"} else if (extant.indexOf(d.GEO_ID) >= 0) {return "q5-9"} else {return null;}});
+
+    });
+
+    brush.on("brushend.chart", function() {
+      if (brush.empty()) {
+        var div = d3.select(this.parentNode.parentNode.parentNode);
+        div.select(".title a").style("display", "none");
+        div.select("#clip-" + id + " rect").attr("x", null).attr("width", "100%");
+        dimension.filterAll();
+      }
+    });
+
+    chart.margin = function(_) {
+      if (!arguments.length) return margin;
+      margin = _;
+      return chart;
+    };
+
+    chart.x = function(_) {
+      if (!arguments.length) return x;
+      x = _;
+      axis.scale(x);
+      brush.x(x);
+      return chart;
+    };
+
+    chart.y = function(_) {
+      if (!arguments.length) return y;
+      y = _;
+      return chart;
+    };
+
+    chart.dimension = function(_) {
+      if (!arguments.length) return dimension;
+      dimension = _;
+      return chart;
+    };
+
+    chart.filter = function(_) {
+      if (_) {
+        brush.extent(_);
+        dimension.filterRange(_);
+      } else {
+        brush.clear();
+        dimension.filterAll();
+      }
+      brushDirty = true;
+      return chart;
+    };
+
+    chart.group = function(_) {
+      if (!arguments.length) return group;
+      group = _;
+      return chart;
+    };
+
+    chart.round = function(_) {
+      if (!arguments.length) return round;
+      round = _;
+      return chart;
+    };
+
+    return d3.rebind(chart, brush, "on");
+  }
+
+  // Renders the specified chart or list.
+  function render(method) {
+    d3.select(this).call(method);
+  }
+
+  // Whenever the brush moves, re-rendering everything.
+  function renderAll() {
+    chart.each(render);
+  }
+
+  window.filter = function(filters) {
+    filters.forEach(function(d, i) { charts[i].filter(d); });
+    renderAll();
+  };
+
+  window.reset = function(i) {
+    charts.forEach(function (c) {
+      c.filter(null);
+    })
+    renderAll();
+    svg.attr("class", "counties")
+      .selectAll("path")
+       .style("fill", function(d) {
+      	if(d.properties.CENSUSAREA ){
+      		return color(d.properties.CENSUSAREA)
+      	}
+      	else{
+      		return "white"
+      	}})
+        .attr("class", function(d) { return quantize(popById.get(d.GEO_ID)); });
+  };
 
 }
 
-
-//Update map on zoom/pan
-function zoomed() {
-  features.attr("transform", "translate(" + zoom.translate() + ")scale(" + zoom.scale() + ")")
-      .selectAll("path").style("stroke-width", 1 / zoom.scale() + "px" );
-}
-
-
-//Position of the tooltip relative to the cursor
-var tooltipOffset = {x: 5, y: -25};
-
-//Create a tooltip, hidden at the start
-function showTooltip(d) {
-  moveTooltip();
-  tooltip.style("display","block")
-      .text("Area: "+d.properties.NAME+" | Population: "+d.properties.CENSUSAREA);
-}
-
-//Move the tooltip to track the mouse
-function moveTooltip() {
-  tooltip.style("top",(d3.event.pageY+tooltipOffset.y)+"px")
-      .style("left",(d3.event.pageX+tooltipOffset.x)+"px");
-}
-
-//Create a tooltip, hidden at the start
-function hideTooltip() {
-  tooltip.style("display","none");
-}
 </script>
+
 </div>
 		<div id="zerostate" class="container"></div>
 		<script type="text/javascript">

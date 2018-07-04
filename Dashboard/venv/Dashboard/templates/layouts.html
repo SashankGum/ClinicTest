@@ -9,6 +9,8 @@
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/dc/3.0.4/dc.min.js" charset="utf-8"></script>
 	<script src="http://d3js.org/d3.v3.min.js"></script>
 	<script src="http://d3js.org/topojson.v1.min.js"></script>
+	<script src="http://d3js.org/queue.v1.min.js"></script>
+	<script src="http://labratrevenge.com/d3-tip/javascripts/d3.tip.v0.6.3.js"></script>  
 		 <style>
       #natAvg {
         background: orange;
@@ -22,7 +24,9 @@
       }
     </style>
     <style>
-
+body{
+	background-color: #fff;
+}
 path {
   stroke-width: 1px;
   stroke: white;
@@ -45,10 +49,80 @@ path:hover, path.highlighted {
   opacity: 0.7
   /*display: none;*/
 }
+.d3-tip {
+  line-height: 1.5;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  border-radius: 0px;
+  text-align: center;
+}
+
+#charts{
+  float: left;
+}
+
+.chart {
+  height: 100px;
+  margin-bottom: 20px;
+}
+
+.reset {
+  padding-left: 1em;
+  font-size: smaller;
+  color: blue;
+}
+
+.background.bar {
+  fill: #ccc;
+}
+
+.foreground.bar {
+  fill: steelblue;
+}
+
+.axis path, .axis line {
+  fill: none;
+  stroke: #000;
+  shape-rendering: crispEdges;
+}
+
+.axis text {
+  font: 10px sans-serif;
+}
+
+.brush rect.extent {
+  fill: steelblue;
+  fill-opacity: .125;
+}
+
+.brush .resize path {
+  fill: #eee;
+  stroke: #666;
+}
+
+#chart path {
+  stroke: #fff;
+}
+
+#chart path.highlighted {
+  cursor: pointer;
+}
+
+.q0-9 { fill:#b2182b; }
+  .q1-9 { fill:#d6604d; }
+  .q2-9 { fill:#f4a582; }
+  .q3-9 { fill:#fddbc7; }
+  .q4-9 { fill:#f7f7f7; }
+  .q5-9 { fill:#d1e5f0; }
+  .q6-9 { fill:#92c5de; }
+  .q7-9 { fill:#4393c3; }
+  .q8-9 { fill:#2166ac; }
 
 </style>
 </head>
-<body class="bg-dark">
+<!-- <body class="bg-dark"> -->
+	<body>
 {% include 'includes/_navbar.html'%}
 <div class="container" padding-top="100px">
 {% block body %}{% endblock %}
